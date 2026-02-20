@@ -18,6 +18,7 @@ class ShippingResponse(BaseModel):
     finalCost: float
     estimatedDays: int
 
+
 class SellerBase(BaseModel):
     name: str = Field(..., min_length=2)
     latitude: float
@@ -33,6 +34,7 @@ class SellerResponse(SellerBase):
 
     class Config:
         from_attributes = True
+
 
 class CustomerBase(BaseModel):
     name: str = Field(..., min_length=2)
@@ -50,6 +52,7 @@ class CustomerResponse(CustomerBase):
     class Config:
         from_attributes = True
 
+
 class WarehouseBase(BaseModel):
     name: str = Field(..., min_length=2)
     latitude: float
@@ -66,6 +69,7 @@ class WarehouseResponse(WarehouseBase):
 
     class Config:
         from_attributes = True
+
 
 class ProductBase(BaseModel):
     seller_id: int
@@ -85,6 +89,7 @@ class ProductResponse(ProductBase):
 
     class Config:
         from_attributes = True
+
 
 class InventoryBase(BaseModel):
     warehouse_id: int

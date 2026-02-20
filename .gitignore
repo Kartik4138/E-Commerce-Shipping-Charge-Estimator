@@ -41,3 +41,7 @@ coverage.xml
 
 # Caching (Redis might create dump files if running locally in the project dir)
 dump.rdb
+
+# Docker
+*.env
+docker-compose.override.yml

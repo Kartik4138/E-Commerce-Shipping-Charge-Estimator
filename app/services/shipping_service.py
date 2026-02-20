@@ -6,7 +6,6 @@ from app.utils.distance import haversine
 
 MAX_SERVICE_DISTANCE = 2000
 
-
 async def calculate_shipping(
     db,
     seller_id,
@@ -15,6 +14,15 @@ async def calculate_shipping(
     quantity,
     delivery_speed
 ):
+    """ Core shipping orchestration service. 
+    Responsibilities: 
+    1. Validate seller, customer, and product existence. 
+    2. Identify nearest eligible warehouse. 
+    3. Compute delivery distance. 
+    4. Enforce service distance constraint. 
+    5. Select transport strategy dynamically.
+    6. Calculate final shipping cost breakdown. 
+    """
 
     seller = (await db.execute(
         select(Seller).where(Seller.id == seller_id)
@@ -72,7 +80,7 @@ async def calculate_shipping(
         express_charge = 1.2 * final_weight
 
     final_cost = base_cost + courier_charge + express_charge
-    
+
     return {
         "warehouseId": warehouse.id,
         "warehouseLocation": {

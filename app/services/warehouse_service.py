@@ -1,49 +1,46 @@
 from sqlalchemy import select
 from app.models import Warehouse, WarehouseInventory
 from app.utils.distance import haversine
+from fastapi import HTTPException
 
 
-async def get_nearest_warehouse(
-    db,
-    seller,
-    product_id,
-    quantity
-):
-    result = await db.execute(select(Warehouse))
-    warehouses = result.scalars().all()
+async def get_nearest_warehouse(db, seller, product_id, quantity):
 
-    valid = []
+    warehouses = (await db.execute(
+        select(Warehouse)
+    )).scalars().all()
 
-    for wh in warehouses:
-        inventory = (
-            await db.execute(
-                select(WarehouseInventory).where(
-                    WarehouseInventory.warehouse_id == wh.id,
-                    WarehouseInventory.product_id == product_id
-                )
+    eligible_warehouses = []
+
+    for warehouse in warehouses:
+
+        # Check inventory for this warehouse + product
+        inventory = (await db.execute(
+            select(WarehouseInventory).where(
+                WarehouseInventory.warehouse_id == warehouse.id,
+                WarehouseInventory.product_id == product_id
             )
-        ).scalar_one_or_none()
+        )).scalar_one_or_none()
 
-        if not inventory:
-            continue
-
-        if inventory.available_units < quantity:
-            continue
-
-        if wh.capacity < quantity:
+        # Skip if no inventory or insufficient stock
+        if not inventory or inventory.available_units < quantity:
             continue
 
         distance = haversine(
             seller.latitude,
             seller.longitude,
-            wh.latitude,
-            wh.longitude
+            warehouse.latitude,
+            warehouse.longitude
         )
 
-        valid.append((wh, distance))
+        eligible_warehouses.append((warehouse, distance))
 
-    if not valid:
-        raise Exception("No warehouse available with sufficient stock.")
+    if not eligible_warehouses:
+        raise HTTPException(
+            status_code=400,
+            detail="No warehouse available with sufficient stock."
+        )
 
-    valid.sort(key=lambda x: x[1])
-    return valid[0][0]
+    eligible_warehouses.sort(key=lambda x: x[1])
+
+    return eligible_warehouses[0][0]

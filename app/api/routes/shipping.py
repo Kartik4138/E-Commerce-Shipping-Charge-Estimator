@@ -23,6 +23,14 @@ async def get_shipping_charge(
     deliverySpeed: str = Query(...),
     db: AsyncSession = Depends(get_db)
 ):
+    """ Calculates shipping charge from a specific warehouse to a customer. 
+    Flow: 1. Check Redis cache. 
+    2. Validate warehouse, customer, and product existence. 
+    3. Calculate geographic distance using Haversine formula. 
+    4. Select transport strategy dynamically. 
+    5. Compute shipping cost. 
+    6. Cache and return response. 
+    """
 
     cache_key = f"shipping:{warehouseId}:{customerId}:{productId}:{quantity}:{deliverySpeed}"
 
@@ -65,17 +73,22 @@ async def get_shipping_charge(
             customer.longitude
         )
 
-        total_weight = product.weight * quantity
+        actual_weight = product.weight * quantity
+        volumetric_weight = (
+            (product.length * product.width * product.height) / 5000
+        ) * quantity
+
+        final_weight = max(actual_weight, volumetric_weight)
 
         strategy, _ = transport_factory(distance, deliverySpeed)
 
-        base_cost = await strategy.calculate(distance, total_weight)
+        base_cost = await strategy.calculate(distance, final_weight)
 
         courier_charge = 10
         express_charge = 0
 
         if deliverySpeed == "express":
-            express_charge = 1.2 * total_weight
+            express_charge = 1.2 * final_weight
 
         final_cost = base_cost + courier_charge + express_charge
 
@@ -86,7 +99,7 @@ async def get_shipping_charge(
         await set_cached_data(cache_key, response)
 
         return response
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -98,6 +111,11 @@ async def calculate_combined(
     request: ShippingRequest,
     db: AsyncSession = Depends(get_db)
 ):
+    """ Aggregator endpoint: 
+    1. Finds nearest warehouse for seller. 
+    2. Calculates shipping charge. 
+    3. Returns combined structured response. Delegates core business logic to service layer. 
+    """
 
     cache_key = (
         f"combined:{request.sellerId}:{request.customerId}:"
@@ -130,7 +148,7 @@ async def calculate_combined(
         await set_cached_data(cache_key, response)
 
         return response
-    
+
     except HTTPException:
         raise
     except Exception as e:

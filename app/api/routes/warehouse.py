@@ -10,7 +10,6 @@ router = APIRouter(
     tags=["Warehouse"]
 )
 
-
 @router.get("/nearest")
 async def nearest(
     sellerId: int,
@@ -18,6 +17,11 @@ async def nearest(
     quantity: int,
     db: AsyncSession = Depends(get_db)
 ):
+    """ Determines the nearest eligible warehouse for a seller. 
+    Flow: 1. Validate seller existence. 
+    2. Delegate warehouse selection logic to service layer. 
+    3. Return minimal structured warehouse details. 
+    """
 
     seller = (
         await db.execute(select(Seller).where(Seller.id == sellerId))

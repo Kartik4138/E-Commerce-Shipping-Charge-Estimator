@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from app.api.deps import get_db
@@ -10,6 +11,7 @@ from app.schemas import (
     ProductCreate,
     InventoryCreate,
 )
+from app.cache import delete_pattern
 
 router = APIRouter(
     prefix="/admin",
@@ -17,12 +19,8 @@ router = APIRouter(
 )
 
 
-# Add Seller
 @router.post("/seller")
-async def add_seller(
-    payload: SellerCreate,
-    db: AsyncSession = Depends(get_db)
-):
+async def add_seller(payload: SellerCreate, db: AsyncSession = Depends(get_db)):
     try:
         seller = Seller(**payload.model_dump())
         db.add(seller)
@@ -39,12 +37,8 @@ async def add_seller(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Add Customer
 @router.post("/customer")
-async def add_customer(
-    payload: CustomerCreate,
-    db: AsyncSession = Depends(get_db)
-):
+async def add_customer(payload: CustomerCreate, db: AsyncSession = Depends(get_db)):
     try:
         customer = Customer(**payload.model_dump())
         db.add(customer)
@@ -61,12 +55,8 @@ async def add_customer(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Add Warehouse
 @router.post("/warehouse")
-async def add_warehouse(
-    payload: WarehouseCreate,
-    db: AsyncSession = Depends(get_db)
-):
+async def add_warehouse(payload: WarehouseCreate, db: AsyncSession = Depends(get_db)):
     try:
         warehouse = Warehouse(**payload.model_dump())
         db.add(warehouse)
@@ -83,12 +73,8 @@ async def add_warehouse(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Add Product
 @router.post("/product")
-async def add_product(
-    payload: ProductCreate,
-    db: AsyncSession = Depends(get_db)
-):
+async def add_product(payload: ProductCreate, db: AsyncSession = Depends(get_db)):
     try:
         product = Product(**payload.model_dump())
         db.add(product)
@@ -105,22 +91,34 @@ async def add_product(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-#  Add Inventory
 @router.post("/inventory")
-async def add_inventory(
-    payload: InventoryCreate,
-    db: AsyncSession = Depends(get_db)
-):
+async def add_inventory(payload: InventoryCreate, db: AsyncSession = Depends(get_db)):
     try:
-        inventory = WarehouseInventory(**payload.model_dump())
-        db.add(inventory)
-        await db.commit()
-        await db.refresh(inventory)
-        return inventory
+        existing_inventory = (
+            await db.execute(
+                select(WarehouseInventory).where(
+                    WarehouseInventory.warehouse_id == payload.warehouse_id,
+                    WarehouseInventory.product_id == payload.product_id
+                )
+            )
+        ).scalars().first()
 
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail="Invalid inventory data")
+        if existing_inventory:
+            existing_inventory.available_units = payload.available_units
+            await db.commit()
+            await db.refresh(existing_inventory)
+            result = existing_inventory
+        else:
+            inventory = WarehouseInventory(**payload.model_dump())
+            db.add(inventory)
+            await db.commit()
+            await db.refresh(inventory)
+            result = inventory
+
+        await delete_pattern(f"shipping:*:{payload.product_id}:*")
+        await delete_pattern(f"combined:*:{payload.product_id}:*")
+
+        return result
 
     except Exception as e:
         await db.rollback()
