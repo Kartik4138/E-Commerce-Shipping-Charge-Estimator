@@ -19,12 +19,6 @@ This system connects **Kirana stores (customers)** with **sellers**, dynamically
   - Airplane (Long Distance)
 - Supports **Standard** and **Express** delivery modes.
 
-### 📦 Volumetric Weight Logic
-- Calculates:
-  - Actual Weight
-  - Volumetric Weight  
-- Charges based on whichever is higher.
-
 ### ⚡ High Performance
 - Fully asynchronous architecture using:
   - FastAPI
