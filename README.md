@@ -2,42 +2,53 @@
 
 A high-performance, asynchronous REST API built with **FastAPI** to calculate shipping charges for a B2B e-commerce marketplace.
 
-This system connects **Kirana stores (customers)** with **sellers**, dynamically determines the nearest drop-off warehouse, validates inventory constraints, and calculates optimized shipping charges based on distance, transport strategy, volumetric weight, and delivery speed.
+This system connects **Kirana stores (customers)** with **sellers**, dynamically determines the nearest warehouse, validates inventory constraints, and calculates optimized shipping charges based on:
+
+- 📍 Distance (Haversine formula)
+- 🚛 Transport strategy (MiniVan, Truck, Airplane)
+- 📦 Volumetric weight logic
+- ⚡ Delivery speed (Standard / Express)
 
 ---
 
 ## ⚡ Key Features
 
 ### 🗺️ Intelligent Warehouse Routing
-- Uses the **Haversine Formula** to calculate geographic distance.
-- Automatically selects the nearest warehouse with available inventory and capacity.
+- Uses the Haversine formula for geospatial distance calculation.
+- Filters warehouses by inventory availability.
+- Selects the nearest eligible warehouse.
 
 ### 💰 Smart Shipping Engine
-- Implements the **Strategy Pattern** to dynamically choose:
-  - Mini Van (Short Distance)
-  - Truck (Medium Distance)
-  - Airplane (Long Distance)
-- Supports **Standard** and **Express** delivery modes.
+- Strategy Pattern for transport mode selection:
+  - MiniVan (short distance)
+  - Truck (medium distance)
+  - Airplane (long distance)
+- Supports Standard and Express delivery pricing.
+- Applies volumetric weight pricing logic.
 
-### ⚡ High Performance
-- Fully asynchronous architecture using:
-  - FastAPI
-  - SQLAlchemy (Async)
-  - asyncpg
-- Redis caching for complex shipping calculations.
+### 📦 Volumetric Weight Handling
+Shipping cost is calculated using:
+
+```
+Chargeable Weight = max(actual_weight, volumetric_weight)
+```
+
+Where:
+
+```
+volumetric_weight = (length × width × height) / 5000
+```
+
+### ⚡ High Performance Architecture
+- Fully asynchronous FastAPI application
+- Async SQLAlchemy + asyncpg
+- Redis caching with smart invalidation
+- Dockerized infrastructure
 
 ### 🏬 Inventory-Aware Routing
-- Validates:
-  - Warehouse stock availability
-  - Capacity constraints
-  - Seller-product mapping
-
-### 🛠️ Admin Data Management APIs
-- Create sellers
-- Create customers
-- Add warehouses
-- Add products
-- Manage warehouse inventory
+- Validates stock before routing
+- Automatically falls back to farther warehouse if nearest is out of stock
+- Prevents invalid shipments
 
 ---
 
@@ -53,6 +64,7 @@ This system connects **Kirana stores (customers)** with **sellers**, dynamically
 | Caching | Redis |
 | Validation | Pydantic |
 | Testing | Pytest |
+| Containerization | Docker & Docker Compose |
 
 ---
 
@@ -82,10 +94,11 @@ pip install -r requirements.txt
 
 ## 4️⃣ Configure Environment Variables
 
-Update your database connection:
+Set:
 
-```python
-DATABASE_URL = "postgresql+asyncpg://<user>:<password>@<host>/<dbname>"
+```
+DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>/<dbname>
+REDIS_HOST=localhost
 ```
 
 Ensure:
@@ -99,91 +112,63 @@ uvicorn app.main:app --reload
 ```
 
 Access:
-- API → `http://localhost:8000`
-- Swagger Docs → `http://localhost:8000/docs`
+- API → http://localhost:8000
+- Swagger Docs → http://localhost:8000/docs
 
 ## 6️⃣ Run Tests
 
 ```bash
 pytest -v
 ```
-or when using docker
+
+If running Redis via Docker:
+
 ```bash
 $env:REDIS_HOST="localhost"; pytest -v
 ```
 
 ---
 
----
-
 # 🐳 Docker Setup
 
-This project is fully containerized using Docker and Docker Compose.
+The application runs with:
 
-It runs:
 - FastAPI (Uvicorn)
 - PostgreSQL
 - Redis
 
----
-
-## 📦 Run the Application
-
-### Build and start containers
+## Build and Start
 
 ```bash
 docker-compose up --build
 ```
 
-### Run in detached mode
+Run in background:
 
 ```bash
 docker-compose up -d --build
 ```
 
----
-
-## 🌍 Access the Services
+## Access
 
 - API → http://localhost:8000
 - Swagger Docs → http://localhost:8000/docs
 - PostgreSQL → localhost:5432
 - Redis → localhost:6379
 
----
-
-## 🛑 Stop Containers
+## Stop
 
 ```bash
 docker-compose down
 ```
 
-To remove volumes:
+Remove volumes:
 
 ```bash
 docker-compose down -v
 ```
 
 ---
-
-## ⚙️ Environment Configuration
-
-Database connection is configured inside `docker-compose.yml`:
-
-```
-DATABASE_URL=postgresql+asyncpg://postgres:root@db:5432/shipping
-```
-
----
-
-## 🚀 Notes
-
-- Uvicorn is used as the ASGI server.
-- Containers communicate internally using service names (`db`, `redis`).
-- No additional production server (e.g., Gunicorn) is used.
-
----
-
 
 # 📖 API Documentation
 
@@ -194,21 +179,20 @@ DATABASE_URL=postgresql+asyncpg://postgres:root@db:5432/shipping
 Base Route:
 
 ```
-/admin
+/api/v1/admin
 ```
 
 ---
 
 ## ➤ Add Seller
 
-**POST** `/admin/seller`
+**POST** `/api/v1/admin/seller`
 
-### Request Body
 ```json
 {
-  "name": "ABC Traders",
-  "lat": 28.6139,
-  "long": 77.2090
+  "name": "Nestle Seller",
+  "latitude": 12.9716,
+  "longitude": 77.5946
 }
 ```
 
@@ -216,14 +200,13 @@ Base Route:
 
 ## ➤ Add Customer
 
-**POST** `/admin/customer`
+**POST** `/api/v1/admin/customer`
 
-### Request Body
 ```json
 {
-  "name": "Kirana Store 1",
-  "lat": 28.7041,
-  "long": 77.1025
+  "name": "Shree Kirana Store",
+  "latitude": 13.0352,
+  "longitude": 77.5970
 }
 ```
 
@@ -231,15 +214,14 @@ Base Route:
 
 ## ➤ Add Warehouse
 
-**POST** `/admin/warehouse`
+**POST** `/api/v1/admin/warehouse`
 
-### Request Body
 ```json
 {
-  "name": "Delhi Central Warehouse",
-  "lat": 28.5355,
-  "long": 77.3910,
-  "capacity": 10000
+  "name": "BLR_Warehouse",
+  "latitude": 12.9762,
+  "longitude": 77.6033,
+  "capacity": 1000
 }
 ```
 
@@ -247,33 +229,37 @@ Base Route:
 
 ## ➤ Add Product
 
-**POST** `/admin/product`
+**POST** `/api/v1/admin/product`
 
-### Request Body
 ```json
 {
-  "name": "Rice 25kg",
-  "weight": 25,
-  "length": 50,
-  "width": 40,
-  "height": 20
+  "seller_id": 1,
+  "name": "Rice Bag 10kg",
+  "weight": 10,
+  "length": 100,
+  "width": 50,
+  "height": 40
 }
 ```
 
 ---
 
-## ➤ Add Inventory
+## ➤ Add / Update Inventory (Upsert)
 
-**POST** `/admin/inventory`
+**POST** `/api/v1/admin/inventory`
 
-### Request Body
 ```json
 {
-  "warehouseId": 1,
-  "productId": 1,
-  "availableQuantity": 500
+  "warehouse_id": 1,
+  "product_id": 1,
+  "available_units": 200
 }
 ```
+
+If inventory exists → updates  
+If not → inserts new row  
+
+Cache invalidation is triggered automatically.
 
 ---
 
@@ -285,68 +271,62 @@ Base Route:
 
 **GET** `/api/v1/warehouse/nearest`
 
-### Query Parameters
+Query Parameters:
 - `sellerId`
 - `productId`
 - `quantity`
 
-### Response
+Response:
+
 ```json
 {
-  "warehouseId": 789,
+  "warehouseId": 1,
   "warehouseLocation": {
-    "lat": 12.99999,
-    "long": 37.923273
+    "lat": 12.9762,
+    "long": 77.6033
   }
 }
 ```
 
 ---
 
-## ➤ Get Shipping Charge
+## ➤ Get Shipping Charge (Warehouse-Based)
 
 **GET** `/api/v1/shipping-charge`
 
-### Query Parameters
+Query Parameters:
 - `warehouseId`
 - `customerId`
 - `productId`
 - `quantity`
 - `deliverySpeed` ("standard" | "express")
 
-### Response
-```json
-{
-  "shippingCharge": 150.00
-}
-```
-
 ---
 
-## ➤ Combined Shipping Calculation
+## ➤ Combined Shipping Calculation (Recommended)
 
 **POST** `/api/v1/shipping-charge/calculate`
 
-### Request
 ```json
 {
-  "sellerId": 123,
-  "customerId": 456,
-  "productId": 789,
-  "quantity": 2,
+  "sellerId": 1,
+  "customerId": 1,
+  "productId": 1,
+  "quantity": 5,
   "deliverySpeed": "express"
 }
 ```
 
-### Response
+Response:
+
 ```json
 {
-  "shippingCharge": 180.00,
+  "shippingCharge": 245.50,
   "nearestWarehouse": {
-    "warehouseId": 789,
+    "warehouseId": 1,
     "warehouseLocation": {
-      "lat": 12.99999,
-      "long": 37.923273
+      "lat": 12.9762,
+      "long": 77.6033
     }
   }
 }
@@ -354,36 +334,32 @@ Base Route:
 
 ---
 
-# 🏗️ Design Patterns Used
+# 🏗️ Architecture & Design Patterns
 
 ### Strategy Pattern
-- `MiniVanStrategy`
-- `TruckStrategy`
-- `AirplaneStrategy`
-
-Allows adding new transport modes without modifying core logic.
+Used for transport pricing logic:
+- MiniVanStrategy
+- TruckStrategy
+- AirplaneStrategy
 
 ### Factory Pattern
-- `transport_factory` dynamically selects strategy based on distance.
+`transport_factory()` dynamically selects transport mode based on distance and delivery speed.
 
-### Repository + Service Layer
-- Business logic separated from route handlers.
-- Clean, modular, and scalable architecture.
+### Service Layer Architecture
+- Routes remain thin
+- Business logic handled in services
+- Clean separation of concerns
 
 ---
 
-# 🧪 Testing
+# 🧪 Testing Coverage
 
-```bash
-pytest -v
-```
-
-Covers:
-- Distance calculations
-- Strategy selection
+- Distance calculation validation
 - Volumetric weight logic
 - Inventory validation
+- Transport strategy selection
 - API integration tests
+- Cache invalidation behavior
 
 ---
 
@@ -391,12 +367,14 @@ Covers:
 
 - JWT Authentication
 - Role-Based Access Control
+- Order placement with inventory decrement
+- Rate limiting
 - CI/CD Pipeline
-- Kubernetes Deployment
+- Kubernetes deployment
 
 ---
 
 # 👨‍💻 Author
 
 Kartik Singh  
-B.Tech CSE | Backend Developer
+Backend & Systems Enthusiast
