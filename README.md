@@ -55,6 +55,12 @@ uvicorn app.main:app --reload
 ```
 The application will be available at `http://localhost:8000`. You can view the interactive Swagger API documentation at `http://localhost:8000/docs`.
 
+### 6. Run Tests
+To validate the API functionality, business logic, and edge cases, you can run the automated test suite using pytest:
+```bash
+pytest -v
+```
+
 ---
 
 ## 📖 API Documentation
