@@ -1,7 +1,10 @@
 import redis.asyncio as redis
 import json
+import os
 
-r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+
+r = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
 
 async def get_cached_data(key):
     data = await r.get(key)

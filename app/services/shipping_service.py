@@ -72,8 +72,13 @@ async def calculate_shipping(
         express_charge = 1.2 * final_weight
 
     final_cost = base_cost + courier_charge + express_charge
-
+    
     return {
+        "warehouseId": warehouse.id,
+        "warehouseLocation": {
+            "lat": warehouse.latitude,
+            "long": warehouse.longitude
+        },
         "distance": round(distance, 2),
         "transportMode": mode,
         "baseCost": round(base_cost, 2),

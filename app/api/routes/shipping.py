@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models import Warehouse, Customer, Product
+from app.schemas import ShippingRequest
 from app.services.shipping_service import calculate_shipping
 from app.api.deps import get_db
 from app.cache import get_cached_data, set_cached_data
@@ -94,14 +95,14 @@ async def get_shipping_charge(
 
 @router.post("/calculate")
 async def calculate_combined(
-    request: dict,
+    request: ShippingRequest,
     db: AsyncSession = Depends(get_db)
 ):
 
     cache_key = (
-        f"combined:{request['sellerId']}:{request['customerId']}:"
-        f"{request['productId']}:{request.get('quantity',1)}:"
-        f"{request['deliverySpeed']}"
+        f"combined:{request.sellerId}:{request.customerId}:"
+        f"{request.productId}:{request.quantity}:"
+        f"{request.deliverySpeed}"
     )
 
     cached_response = await get_cached_data(cache_key)
@@ -111,11 +112,11 @@ async def calculate_combined(
     try:
         result = await calculate_shipping(
             db,
-            request["sellerId"],
-            request["customerId"],
-            request["productId"],
-            request.get("quantity", 1),
-            request["deliverySpeed"]
+            request.sellerId,
+            request.customerId,
+            request.productId,
+            request.quantity,
+            request.deliverySpeed
         )
 
         response = {
