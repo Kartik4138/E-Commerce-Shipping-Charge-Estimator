@@ -1,80 +1,231 @@
-# B2B E-Commerce Shipping Charge Estimator
+# 🚚 B2B E-Commerce Shipping Charge Estimator
 
-A high-performance, asynchronous REST API built with FastAPI to calculate shipping charges for a B2B e-commerce marketplace. This application helps connect Kirana stores (customers) with sellers by dynamically identifying the nearest drop-off warehouses and calculating delivery costs based on distance, weight, and delivery speed.
+A high-performance, asynchronous REST API built with **FastAPI** to calculate shipping charges for a B2B e-commerce marketplace.
 
-## 🚀 Features
+This system connects **Kirana stores (customers)** with **sellers**, dynamically determines the nearest drop-off warehouse, validates inventory constraints, and calculates optimized shipping charges based on distance, transport strategy, volumetric weight, and delivery speed.
 
-* **Dynamic Warehouse Routing:** Calculates the nearest warehouse for a seller using the Haversine formula.
-* **Smart Shipping Calculation:** Calculates shipping costs using a Strategy Pattern based on distance (Mini Van, Truck, Aeroplane) and handles Express vs. Standard delivery.
-* **Volumetric Weight Handling:** Automatically calculates both actual and volumetric weight and charges based on the higher value, simulating real-world logistics.
-* **High Performance:** Fully asynchronous architecture using `FastAPI` and `SQLAlchemy (asyncpg)`.
-* **Response Caching:** Integrated `Redis` caching for complex calculations to ensure blazing-fast response times.
-* **Inventory Awareness:** Validates warehouse capacity and existing inventory constraints before routing sellers.
+---
 
-## 🛠️ Tech Stack
+## ⚡ Key Features
 
-* **Framework:** Python 3.10+, FastAPI
-* **Database:** PostgreSQL (with Asyncpg driver)
-* **ORM:** SQLAlchemy (Async)
-* **Caching:** Redis
-* **Data Validation:** Pydantic
+### 🗺️ Intelligent Warehouse Routing
+- Uses the **Haversine Formula** to calculate geographic distance.
+- Automatically selects the nearest warehouse with available inventory and capacity.
 
-## 📦 Installation & Setup
+### 💰 Smart Shipping Engine
+- Implements the **Strategy Pattern** to dynamically choose:
+  - Mini Van (Short Distance)
+  - Truck (Medium Distance)
+  - Airplane (Long Distance)
+- Supports **Standard** and **Express** delivery modes.
 
-### Prerequisites
-* Python 3.10+
-* PostgreSQL running locally or remotely
-* Redis server running locally or remotely
+### 📦 Volumetric Weight Logic
+- Calculates:
+  - Actual Weight
+  - Volumetric Weight  
+- Charges based on whichever is higher.
 
-### 1. Clone the repository
+### ⚡ High Performance
+- Fully asynchronous architecture using:
+  - FastAPI
+  - SQLAlchemy (Async)
+  - asyncpg
+- Redis caching for complex shipping calculations.
+
+### 🏬 Inventory-Aware Routing
+- Validates:
+  - Warehouse stock availability
+  - Capacity constraints
+  - Seller-product mapping
+
+### 🛠️ Admin Data Management APIs
+- Create sellers
+- Create customers
+- Add warehouses
+- Add products
+- Manage warehouse inventory
+
+---
+
+# 🛠️ Tech Stack
+
+| Layer | Technology |
+|--------|------------|
+| Framework | FastAPI |
+| Language | Python 3.10+ |
+| Database | PostgreSQL |
+| ORM | SQLAlchemy (Async) |
+| Driver | asyncpg |
+| Caching | Redis |
+| Validation | Pydantic |
+| Testing | Pytest |
+
+---
+
+# 📦 Installation & Setup
+
+## 1️⃣ Clone Repository
+
 ```bash
 git clone <your-repo-url>
 cd shipping-estimator
 ```
 
-### 2. Set up a virtual environment
+## 2️⃣ Create Virtual Environment
+
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
+# Windows:
+venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+## 3️⃣ Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment
-Update the `DATABASE_URL` in your database configuration to point to your PostgreSQL instance. Ensure Redis is running on `localhost:6379`.
+## 4️⃣ Configure Environment Variables
+
+Update your database connection:
+
 ```python
 DATABASE_URL = "postgresql+asyncpg://<user>:<password>@<host>/<dbname>"
 ```
 
-### 5. Run the Application
+Ensure:
+- PostgreSQL is running
+- Redis is running on `localhost:6379`
+
+## 5️⃣ Run Application
+
 ```bash
 uvicorn app.main:app --reload
 ```
-The application will be available at `http://localhost:8000`. You can view the interactive Swagger API documentation at `http://localhost:8000/docs`.
 
-### 6. Run Tests
-To validate the API functionality, business logic, and edge cases, you can run the automated test suite using pytest:
+Access:
+- API → `http://localhost:8000`
+- Swagger Docs → `http://localhost:8000/docs`
+
+## 6️⃣ Run Tests
+
 ```bash
 pytest -v
+```
+or when using docker
+```bash
+$env:REDIS_HOST="localhost"; pytest -v
 ```
 
 ---
 
-## 📖 API Documentation
+# 📖 API Documentation
 
-### 1. Get Nearest Warehouse
-Finds the closest warehouse for a seller to drop off a specific product, taking warehouse capacity into account.
+---
 
-* **Endpoint:** `GET /api/v1/warehouse/nearest`
-* **Query Parameters:**
-  * `sellerId` (int)
-  * `productId` (int)
-  * `quantity` (int)
+# 🧑‍💼 Admin APIs
 
-**Response:**
+Base Route:
+
+```
+/admin
+```
+
+---
+
+## ➤ Add Seller
+
+**POST** `/admin/seller`
+
+### Request Body
+```json
+{
+  "name": "ABC Traders",
+  "lat": 28.6139,
+  "long": 77.2090
+}
+```
+
+---
+
+## ➤ Add Customer
+
+**POST** `/admin/customer`
+
+### Request Body
+```json
+{
+  "name": "Kirana Store 1",
+  "lat": 28.7041,
+  "long": 77.1025
+}
+```
+
+---
+
+## ➤ Add Warehouse
+
+**POST** `/admin/warehouse`
+
+### Request Body
+```json
+{
+  "name": "Delhi Central Warehouse",
+  "lat": 28.5355,
+  "long": 77.3910,
+  "capacity": 10000
+}
+```
+
+---
+
+## ➤ Add Product
+
+**POST** `/admin/product`
+
+### Request Body
+```json
+{
+  "name": "Rice 25kg",
+  "weight": 25,
+  "length": 50,
+  "width": 40,
+  "height": 20
+}
+```
+
+---
+
+## ➤ Add Inventory
+
+**POST** `/admin/inventory`
+
+### Request Body
+```json
+{
+  "warehouseId": 1,
+  "productId": 1,
+  "availableQuantity": 500
+}
+```
+
+---
+
+# 🚚 Core Business APIs
+
+---
+
+## ➤ Get Nearest Warehouse
+
+**GET** `/api/v1/warehouse/nearest`
+
+### Query Parameters
+- `sellerId`
+- `productId`
+- `quantity`
+
+### Response
 ```json
 {
   "warehouseId": 789,
@@ -85,29 +236,33 @@ Finds the closest warehouse for a seller to drop off a specific product, taking 
 }
 ```
 
-### 2. Get Shipping Charge
-Calculates the shipping charge from a specific warehouse to a customer based on distance and transport mode.
+---
 
-* **Endpoint:** `GET /api/v1/shipping-charge`
-* **Query Parameters:**
-  * `warehouseId` (int)
-  * `customerId` (int)
-  * `productId` (int)
-  * `quantity` (int, default=1)
-  * `deliverySpeed` (string: "standard" or "express")
+## ➤ Get Shipping Charge
 
-**Response:**
+**GET** `/api/v1/shipping-charge`
+
+### Query Parameters
+- `warehouseId`
+- `customerId`
+- `productId`
+- `quantity`
+- `deliverySpeed` ("standard" | "express")
+
+### Response
 ```json
 {
   "shippingCharge": 150.00
 }
 ```
 
-### 3. Calculate Combined Shipping
-An aggregator endpoint that finds the nearest warehouse and immediately calculates the shipping charge to the customer.
+---
 
-* **Endpoint:** `POST /api/v1/shipping-charge/calculate`
-* **Payload:**
+## ➤ Combined Shipping Calculation
+
+**POST** `/api/v1/shipping-charge/calculate`
+
+### Request
 ```json
 {
   "sellerId": 123,
@@ -118,7 +273,7 @@ An aggregator endpoint that finds the nearest warehouse and immediately calculat
 }
 ```
 
-**Response:**
+### Response
 ```json
 {
   "shippingCharge": 180.00,
@@ -132,7 +287,52 @@ An aggregator endpoint that finds the nearest warehouse and immediately calculat
 }
 ```
 
-## 🏗️ Design Patterns Used
-* **Strategy Pattern:** Used for calculating transportation costs (`MiniVanStrategy`, `TruckStrategy`, `AirplaneStrategy`). This allows the system to easily scale if new transportation modes (e.g., Drone Delivery, Cargo Ship) are introduced without modifying the core calculation engine.
-* **Factory Pattern:** Used (`transport_factory`) to dynamically instantiate the correct transportation strategy based on distance boundaries.
-* **Repository/Service Layer:** Business logic is separated from API route handlers, keeping the codebase clean and modular.
+---
+
+# 🏗️ Design Patterns Used
+
+### Strategy Pattern
+- `MiniVanStrategy`
+- `TruckStrategy`
+- `AirplaneStrategy`
+
+Allows adding new transport modes without modifying core logic.
+
+### Factory Pattern
+- `transport_factory` dynamically selects strategy based on distance.
+
+### Repository + Service Layer
+- Business logic separated from route handlers.
+- Clean, modular, and scalable architecture.
+
+---
+
+# 🧪 Testing
+
+```bash
+pytest -v
+```
+
+Covers:
+- Distance calculations
+- Strategy selection
+- Volumetric weight logic
+- Inventory validation
+- API integration tests
+
+---
+
+# 🚀 Future Enhancements
+
+- JWT Authentication
+- Role-Based Access Control
+- Docker & Docker Compose
+- CI/CD Pipeline
+- Kubernetes Deployment
+
+---
+
+# 👨‍💻 Author
+
+Kartik Singh  
+B.Tech CSE | Backend Developer
