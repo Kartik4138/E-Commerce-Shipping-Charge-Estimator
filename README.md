@@ -114,6 +114,77 @@ $env:REDIS_HOST="localhost"; pytest -v
 
 ---
 
+---
+
+# 🐳 Docker Setup
+
+This project is fully containerized using Docker and Docker Compose.
+
+It runs:
+- FastAPI (Uvicorn)
+- PostgreSQL
+- Redis
+
+---
+
+## 📦 Run the Application
+
+### Build and start containers
+
+```bash
+docker-compose up --build
+```
+
+### Run in detached mode
+
+```bash
+docker-compose up -d --build
+```
+
+---
+
+## 🌍 Access the Services
+
+- API → http://localhost:8000
+- Swagger Docs → http://localhost:8000/docs
+- PostgreSQL → localhost:5432
+- Redis → localhost:6379
+
+---
+
+## 🛑 Stop Containers
+
+```bash
+docker-compose down
+```
+
+To remove volumes:
+
+```bash
+docker-compose down -v
+```
+
+---
+
+## ⚙️ Environment Configuration
+
+Database connection is configured inside `docker-compose.yml`:
+
+```
+DATABASE_URL=postgresql+asyncpg://postgres:root@db:5432/shipping
+```
+
+---
+
+## 🚀 Notes
+
+- Uvicorn is used as the ASGI server.
+- Containers communicate internally using service names (`db`, `redis`).
+- No additional production server (e.g., Gunicorn) is used.
+
+---
+
+
 # 📖 API Documentation
 
 ---
@@ -320,7 +391,6 @@ Covers:
 
 - JWT Authentication
 - Role-Based Access Control
-- Docker & Docker Compose
 - CI/CD Pipeline
 - Kubernetes Deployment
 
